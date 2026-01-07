@@ -1,8 +1,8 @@
 [gd_scene load_steps=2 format=3]
 
-[ext_resource type="Script" path="res://scripts/ManyRollSimulation.gd" id="1_1"]
+[ext_resource type="Script" path="res://scripts/Game.gd" id="1_1"]
 
-[node name="ManyRollSimulation" type="Control"]
+[node name="Game" type="Control"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -32,7 +32,7 @@ theme_override_constants/separation = 12
 text = "Back"
 
 [node name="Title" type="Label" parent="Margin/VBox"]
-text = "Many roll simulation"
+text = "Game"
 
 [node name="Controls" type="HBoxContainer" parent="Margin/VBox"]
 theme_override_constants/separation = 12
@@ -77,6 +77,9 @@ rotation = Vector3(-0.42, 0, 0)
 
 [node name="DiceRoot" type="Node3D" parent="Margin/VBox/ViewportContainer/Viewport/World"]
 
+[node name="PatternLabel" type="Label" parent="Margin/VBox"]
+text = "Pattern: -"
+
 [node name="VSpacer" type="Control" parent="Margin/VBox"]
 size_flags_vertical = 3
 
@@ -110,4 +113,5 @@ text = "Die 4: -"
 
 [node name="Die5" type="Label" parent="Margin/VBox/BottomRow/RollsRowCenter/RollsRow"]
 text = "Die 5: -"
+
 

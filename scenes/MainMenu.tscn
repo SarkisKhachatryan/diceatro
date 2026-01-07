@@ -36,4 +36,7 @@ text = "Stat simulation"
 [node name="ManyRollButton" type="Button" parent="Center/VBox"]
 text = "Many roll simulation"
 
+[node name="GameButton" type="Button" parent="Center/VBox"]
+text = "Game"
+
 

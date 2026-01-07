@@ -30,6 +30,12 @@ func _assert_eq_int(a: int, b: int, msg: String) -> void:
 		_fail("%s (expected %d, got %d)" % [msg, b, a])
 
 
+func _assert_eq_str(a: String, b: String, msg: String) -> void:
+	_assertions += 1
+	if a != b:
+		_fail('%s (expected "%s", got "%s")' % [msg, b, a])
+
+
 func _assert_gt(a: float, b: float, msg: String) -> void:
 	_assertions += 1
 	if not (a > b):
@@ -59,6 +65,7 @@ func _run_all() -> void:
 	await _test_d20_safe_position_above_floor()
 	await _test_main_camera_defaults()
 	await _test_d20_defaults()
+	await _test_game_pattern_detection()
 
 	var summary := "Tests: %d assertions, %d failures" % [_assertions, _failures]
 	if _failures == 0:
@@ -505,3 +512,172 @@ func _test_d20_defaults() -> void:
 	d20_scene = null
 	await process_frame
 	await process_frame
+
+
+func _test_game_pattern_detection() -> void:
+	# Pattern detection is pure logic (no scene tree required).
+	var game_script: Script = load("res://scripts/Game.gd")
+	var game_obj: Object = game_script.new()
+	var describe := func(rolls: Array[int]) -> String:
+		return String(game_obj.call("_describe_patterns", rolls))
+
+	# 5 dice patterns
+	var five_kind: Array[int] = [2, 2, 2, 2, 2]
+	_assert_eq_str(describe.call(five_kind), "Five of a kind", "Detect five of a kind")
+
+	var four_kind: Array[int] = [3, 3, 3, 3, 5]
+	_assert_eq_str(describe.call(four_kind), "Four of a kind", "Detect four of a kind")
+
+	var full_house: Array[int] = [4, 4, 4, 2, 2]
+	_assert_eq_str(describe.call(full_house), "Full house", "Detect full house")
+
+	var three_kind: Array[int] = [1, 1, 1, 3, 5]
+	_assert_eq_str(describe.call(three_kind), "Three of a kind", "Detect three of a kind")
+
+	var two_pair: Array[int] = [6, 6, 2, 2, 5]
+	_assert_eq_str(describe.call(two_pair), "Two pair", "Detect two pair")
+
+	var pair: Array[int] = [4, 4, 1, 3, 6]
+	_assert_eq_str(describe.call(pair), "Pair", "Detect pair")
+
+	# Straights (new rules): 3/4/5-length
+	var large_straight: Array[int] = [2, 3, 4, 5, 6]
+	_assert_eq_str(describe.call(large_straight), "Large straight", "Detect large straight (len 5)")
+
+	var straight: Array[int] = [1, 2, 3, 4, 6]
+	_assert_eq_str(describe.call(straight), "Straight", "Detect straight (len 4)")
+
+	var small_straight: Array[int] = [1, 2, 3, 6, 6]
+	_assert_eq_str(describe.call(small_straight), "Small straight", "Detect small straight (len 3)")
+
+	# Parity patterns (tested on 3 dice so they can win precedence).
+	var all_even: Array[int] = [2, 4, 6]
+	_assert_eq_str(describe.call(all_even), "All even", "Detect all even")
+
+	var all_odd: Array[int] = [1, 3, 5]
+	_assert_eq_str(describe.call(all_odd), "All odd", "Detect all odd")
+
+	# High die (use 2 dice to avoid 3-run / duplicates precedence).
+	var high_die: Array[int] = [1, 6]
+	_assert_eq_str(describe.call(high_die), "High die", "Detect high die")
+
+	# Exhaustive sweep (D6): validate classification for 1..5 dice across all permutations.
+	var label_counts: Dictionary = {}
+	for n: int in range(1, 6):
+		var prefix: Array[int] = []
+		_walk_rolls_and_assert(n, prefix, describe, label_counts)
+
+	# Coverage sanity: each label should appear at least once across the sweep.
+	var expected_labels: Array[String] = [
+		"High die",
+		"Pair",
+		"Two pair",
+		"Three of a kind",
+		"Full house",
+		"Four of a kind",
+		"Five of a kind",
+		"Small straight",
+		"Straight",
+		"Large straight",
+		"All even",
+		"All odd",
+	]
+	for lbl: String in expected_labels:
+		_assert_true(label_counts.has(lbl), "Pattern label should appear in exhaustive sweep: %s" % lbl)
+
+	# Avoid leak warnings at exit.
+	game_obj.free()
+	game_obj = null
+	game_script = null
+
+
+func _walk_rolls_and_assert(n: int, prefix: Array[int], describe: Callable, label_counts: Dictionary) -> void:
+	if prefix.size() == n:
+		var rolls: Array[int] = prefix.duplicate()
+		var got: String = String(describe.call(rolls))
+		var exp: String = _expected_game_pattern(rolls)
+		_assert_eq_str(got, exp, "Pattern mismatch for rolls=%s" % [rolls])
+		label_counts[got] = int(label_counts.get(got, 0)) + 1
+		return
+
+	for v: int in range(1, 7):
+		prefix.append(v)
+		_walk_rolls_and_assert(n, prefix, describe, label_counts)
+		prefix.pop_back()
+
+
+func _expected_game_pattern(rolls: Array[int]) -> String:
+	if rolls.is_empty():
+		return "High die"
+
+	var n: int = rolls.size()
+
+	# Frequency (ignores order).
+	var freq: Dictionary = {}
+	for v: int in rolls:
+		freq[v] = int(freq.get(v, 0)) + 1
+
+	var num_unique: int = freq.size()
+	var max_count: int = 0
+	var pair_count: int = 0
+	for k in freq.keys():
+		var c: int = int(freq[k])
+		max_count = maxi(max_count, c)
+		if c == 2:
+			pair_count += 1
+
+	# Unique sorted (for straights).
+	var unique_sorted: Array[int] = []
+	for k in freq.keys():
+		unique_sorted.append(int(k))
+	unique_sorted.sort()
+
+	# Kind-based patterns (only meaningful for 5 dice in our current ruleset).
+	if n == 5 and num_unique == 1:
+		return "Five of a kind"
+	if n == 5 and num_unique == 2 and max_count == 4:
+		return "Four of a kind"
+	if n == 5 and num_unique == 2 and max_count == 3:
+		return "Full house"
+
+	# Straights (new rules): 3/4/5-length run.
+	if _expected_has_run(unique_sorted, 5):
+		return "Large straight"
+	if _expected_has_run(unique_sorted, 4):
+		return "Straight"
+	if _expected_has_run(unique_sorted, 3):
+		return "Small straight"
+
+	# Remaining kind-based patterns (5 dice).
+	if n == 5 and max_count == 3:
+		return "Three of a kind"
+	if n == 5 and pair_count == 2:
+		return "Two pair"
+	if n == 5 and pair_count == 1:
+		return "Pair"
+
+	# Parity patterns (only if nothing higher matched).
+	var all_even: bool = true
+	var all_odd: bool = true
+	for v: int in rolls:
+		if (v % 2) == 0:
+			all_odd = false
+		else:
+			all_even = false
+	if all_even:
+		return "All even"
+	if all_odd:
+		return "All odd"
+
+	return "High die"
+
+
+func _expected_has_run(unique_sorted: Array[int], run_len: int) -> bool:
+	if run_len <= 1:
+		return true
+	if unique_sorted.size() < run_len:
+		return false
+	for i: int in range(0, unique_sorted.size() - (run_len - 1)):
+		if unique_sorted[i + (run_len - 1)] - unique_sorted[i] == (run_len - 1):
+			return true
+	return false

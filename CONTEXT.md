@@ -21,8 +21,9 @@ Documentation workflow for changes:
 **Diceatro** is a Godot 4.5 project with:
 - **Main menu** (scene navigation)
 - **Roll simulation** (animated 3D dice, one at a time)
-- **Stat simulation** (fast RNG simulation, histogram on screen)
+- **Stat simulation** (fast RNG simulation, per-face distribution on screen)
 - **Many roll simulation** (roll 1–5 dice with animations, show total sum)
+- **Game** (WIP) — currently same as Many roll simulation + pattern detection
 
 Startup scene: `scenes/MainMenu.tscn` (configured in `project.godot`).
 
@@ -34,6 +35,10 @@ Startup scene: `scenes/MainMenu.tscn` (configured in `project.godot`).
 - **Roll simulation screen**: `scenes/Main.tscn`, `scripts/Main.gd`
 - **Stat simulation screen**: `scenes/Simulation.tscn`, `scripts/Simulation.gd`
 - **Many roll simulation screen**: `scenes/ManyRollSimulation.tscn`, `scripts/ManyRollSimulation.gd`
+- **Game screen (WIP)**: `scenes/Game.tscn`, `scripts/Game.gd` (patterns computed in `scripts/Game.gd`)
+- **Many-roll results layout (Rolls header + per-die row)**: `scenes/ManyRollSimulation.tscn`, `scripts/ManyRollSimulation.gd`
+- **Stat simulation results scrolling (avoid clipping)**: `scenes/Simulation.tscn`
+- **Window size / aspect ratio / HiDPI scaling**: `project.godot` (`[display]` section)
 
 ---
 
@@ -85,6 +90,7 @@ What it covers (high-level):
 - Safe positioning above floor
 - Default label-outset constants
 - Main camera framing defaults
+- Game pattern recognition (D6 exhaustive sweep, 1–5 dice)
 
 How to run (PowerShell example):
 
