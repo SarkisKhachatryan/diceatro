@@ -9,6 +9,7 @@ const D20_SCENE: PackedScene = preload("res://scenes/D20.tscn")
 
 @onready var dice_holder: Node3D = $DiceHolder
 @onready var dice_type: OptionButton = $CanvasLayer/UI/HUD/VBox/DiceType
+@onready var back_button: Button = $CanvasLayer/UI/HUD/VBox/BackButton
 @onready var roll_button: Button = $CanvasLayer/UI/HUD/VBox/RollButton
 @onready var score_label: Label = $CanvasLayer/UI/HUD/VBox/ScoreLabel
 
@@ -28,6 +29,7 @@ func _ready() -> void:
 	dice_type.selected = 0
 	dice_type.item_selected.connect(_on_dice_type_selected)
 
+	back_button.pressed.connect(_go_back)
 	roll_button.pressed.connect(_on_roll_pressed)
 
 	# Use the existing child if present (from the scene), otherwise spawn default.
@@ -47,6 +49,10 @@ func _on_roll_pressed() -> void:
 func _on_dice_rolled(value: int) -> void:
 	score_label.text = "Score: %d" % value
 	roll_button.disabled = false
+
+
+func _go_back() -> void:
+	get_tree().change_scene_to_file("res://scenes/MainMenu.tscn")
 
 
 func _on_dice_type_selected(_index: int) -> void:

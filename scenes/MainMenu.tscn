@@ -1,0 +1,39 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/MainMenu.gd" id="1_1"]
+
+[node name="MainMenu" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+script = ExtResource("1_1")
+
+[node name="Center" type="CenterContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+
+[node name="VBox" type="VBoxContainer" parent="Center"]
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Center/VBox"]
+text = "Diceatro"
+
+[node name="RollButton" type="Button" parent="Center/VBox"]
+text = "Roll simulation"
+
+[node name="SimButton" type="Button" parent="Center/VBox"]
+text = "Stat simulation"
+
+[node name="ManyRollButton" type="Button" parent="Center/VBox"]
+text = "Many roll simulation"
+
+

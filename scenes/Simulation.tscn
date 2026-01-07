@@ -1,0 +1,66 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/Simulation.gd" id="1_1"]
+
+[node name="Simulation" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+script = ExtResource("1_1")
+
+[node name="Margin" type="MarginContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="VBox" type="VBoxContainer" parent="Margin"]
+theme_override_constants/separation = 12
+
+[node name="BackButton" type="Button" parent="Margin/VBox"]
+text = "Back"
+
+[node name="Title" type="Label" parent="Margin/VBox"]
+text = "Stat simulation"
+
+[node name="Controls" type="HBoxContainer" parent="Margin/VBox"]
+theme_override_constants/separation = 12
+
+[node name="DiceLabel" type="Label" parent="Margin/VBox/Controls"]
+text = "Dice:"
+
+[node name="DiceType" type="OptionButton" parent="Margin/VBox/Controls"]
+
+[node name="RunsLabel" type="Label" parent="Margin/VBox/Controls"]
+text = "Runs:"
+
+[node name="Runs" type="OptionButton" parent="Margin/VBox/Controls"]
+
+[node name="RunButton" type="Button" parent="Margin/VBox/Controls"]
+text = "Run"
+
+[node name="Progress" type="ProgressBar" parent="Margin/VBox"]
+min_value = 0.0
+max_value = 1.0
+value = 0.0
+
+[node name="Status" type="Label" parent="Margin/VBox"]
+text = "Choose dice + runs, then click Run."
+
+[node name="Results" type="RichTextLabel" parent="Margin/VBox"]
+bbcode_enabled = true
+fit_content = true
+scroll_active = true
+custom_minimum_size = Vector2(0, 240)
+

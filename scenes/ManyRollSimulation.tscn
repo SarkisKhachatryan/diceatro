@@ -1,0 +1,88 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ManyRollSimulation.gd" id="1_1"]
+
+[node name="ManyRollSimulation" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+script = ExtResource("1_1")
+
+[node name="Margin" type="MarginContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="VBox" type="VBoxContainer" parent="Margin"]
+theme_override_constants/separation = 12
+
+[node name="BackButton" type="Button" parent="Margin/VBox"]
+text = "Back"
+
+[node name="Title" type="Label" parent="Margin/VBox"]
+text = "Many roll simulation"
+
+[node name="Controls" type="HBoxContainer" parent="Margin/VBox"]
+theme_override_constants/separation = 12
+
+[node name="DiceLabel" type="Label" parent="Margin/VBox/Controls"]
+text = "Dice:"
+
+[node name="DiceType" type="OptionButton" parent="Margin/VBox/Controls"]
+
+[node name="CountLabel" type="Label" parent="Margin/VBox/Controls"]
+text = "Count:"
+
+[node name="DiceCount" type="OptionButton" parent="Margin/VBox/Controls"]
+
+[node name="RollButton" type="Button" parent="Margin/VBox/Controls"]
+text = "Roll"
+
+[node name="ViewportContainer" type="SubViewportContainer" parent="Margin/VBox"]
+custom_minimum_size = Vector2(0, 340)
+stretch = true
+
+[node name="Viewport" type="SubViewport" parent="Margin/VBox/ViewportContainer"]
+handle_input_locally = false
+size = Vector2i(960, 540)
+
+[node name="World" type="Node3D" parent="Margin/VBox/ViewportContainer/Viewport"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="Margin/VBox/ViewportContainer/Viewport/World"]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="Margin/VBox/ViewportContainer/Viewport/World"]
+rotation = Vector3(-0.9, -0.7, 0)
+light_energy = 2.0
+shadow_enabled = true
+shadow_bias = 0.02
+shadow_normal_bias = 0.5
+
+[node name="Camera3D" type="Camera3D" parent="Margin/VBox/ViewportContainer/Viewport/World"]
+position = Vector3(0, 2.1, 5.4)
+rotation = Vector3(-0.42, 0, 0)
+
+[node name="Floor" type="MeshInstance3D" parent="Margin/VBox/ViewportContainer/Viewport/World"]
+
+[node name="DiceRoot" type="Node3D" parent="Margin/VBox/ViewportContainer/Viewport/World"]
+
+[node name="Summary" type="Label" parent="Margin/VBox"]
+text = "Total: -"
+
+[node name="Results" type="RichTextLabel" parent="Margin/VBox"]
+bbcode_enabled = true
+fit_content = true
+scroll_active = true
+custom_minimum_size = Vector2(0, 220)
+

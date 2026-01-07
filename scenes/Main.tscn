@@ -84,6 +84,9 @@ offset_right = 252.0
 offset_bottom = 104.0
 theme_override_constants/separation = 10
 
+[node name="BackButton" type="Button" parent="CanvasLayer/UI/HUD/VBox"]
+text = "Back"
+
 [node name="DiceType" type="OptionButton" parent="CanvasLayer/UI/HUD/VBox"]
 
 [node name="RollButton" type="Button" parent="CanvasLayer/UI/HUD/VBox"]

@@ -1,0 +1,31 @@
+Keep changes small and coherent. Prefer explicit types in GDScript to avoid Variant inference (warnings may be treated as errors).
+
+Documentation rule:
+- Keep `CONTEXT.md` as the single source of truth entry point. When behavior/structure changes, update `CONTEXT.md` and any linked docs in `docs/` so everything is discoverable.
+
+Documentation workflow:
+- When you make changes to the project:
+  - Update `CONTEXT.md` first (what changed + where).
+  - If needed, update the linked deeper docs in `docs/` (structure, testing, known issues).
+  - Keep `CONTEXT.md` short, but make it a reliable navigation map.
+
+Project entry points:
+- Startup: scenes/MainMenu.tscn
+- Roll simulation: scenes/Main.tscn
+- Stat simulation: scenes/Simulation.tscn
+- Many roll simulation: scenes/ManyRollSimulation.tscn
+
+Dice contract (all dice scenes):
+- func roll() -> void
+- signal rolled(value: int)
+
+Dice visuals:
+- Each dice Body has an Edges MeshInstance3D (black wire edges).
+- Outline exists but is optional (outline_enabled defaults false).
+
+Testing:
+- Headless tests: tests/run_tests.gd
+
+Operational:
+- Do not run git commands unless the user explicitly requests them.
+
