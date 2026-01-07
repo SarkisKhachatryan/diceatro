@@ -1,0 +1,91 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/Main.gd" id="1_1"]
+[ext_resource type="PackedScene" path="res://scenes/Dice.tscn" id="2_1"]
+[ext_resource type="PackedScene" path="res://scenes/D4.tscn" id="3_1"]
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0.08, 0.09, 0.11, 1)
+ambient_light_source = 1
+ambient_light_color = Color(0.22, 0.24, 0.28, 1)
+ambient_light_energy = 0.8
+tonemap_mode = 2
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1"]
+albedo_color = Color(0.12, 0.13, 0.15, 1)
+roughness = 1.0
+metallic = 0.0
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_1"]
+size = Vector2(12, 12)
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_1")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+rotation = Vector3(-0.9, -0.7, 0)
+light_energy = 2.0
+shadow_enabled = true
+shadow_bias = 0.02
+shadow_normal_bias = 0.5
+
+[node name="FillLight" type="OmniLight3D" parent="."]
+position = Vector3(2.4, 2.2, 1.8)
+light_energy = 1.0
+light_color = Color(0.9, 0.95, 1, 1)
+
+[node name="RimLight" type="OmniLight3D" parent="."]
+position = Vector3(-2.6, 2.4, -2.2)
+light_energy = 0.65
+light_color = Color(1, 0.95, 0.9, 1)
+
+[node name="Camera3D" type="Camera3D" parent="."]
+position = Vector3(0, 1.7, 3.2)
+rotation = Vector3(-0.45, 0, 0)
+
+[node name="Floor" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_1")
+surface_material_override/0 = SubResource("StandardMaterial3D_1")
+
+[node name="DiceHolder" type="Node3D" parent="."]
+position = Vector3(0, 0.5, 0)
+
+[node name="Dice" parent="DiceHolder" instance=ExtResource("2_1")]
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="UI" type="Control" parent="CanvasLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+
+[node name="HUD" type="PanelContainer" parent="CanvasLayer/UI"]
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 280.0
+offset_bottom = 172.0
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/UI/HUD"]
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 252.0
+offset_bottom = 104.0
+theme_override_constants/separation = 10
+
+[node name="DiceType" type="OptionButton" parent="CanvasLayer/UI/HUD/VBox"]
+
+[node name="RollButton" type="Button" parent="CanvasLayer/UI/HUD/VBox"]
+text = "Roll"
+
+[node name="ScoreLabel" type="Label" parent="CanvasLayer/UI/HUD/VBox"]
+text = "Score: -"
+
+
