@@ -3,12 +3,15 @@ extends Node3D
 signal rolled(value: int)
 
 @export var roll_duration := 0.9
+@export var present_to_camera := true
+@export var present_duration := 0.18
 @export var min_spins := 2
 @export var max_spins := 4
 
 var is_rolling := false
 var _rng := RandomNumberGenerator.new()
 var _face_normals: Array = []
+var _present_rot: Vector3 = Vector3.ZERO
 
 @onready var body: MeshInstance3D = $Body
 
@@ -66,7 +69,25 @@ func _finish_roll() -> void:
 	tween.set_trans(Tween.TRANS_QUART)
 	tween.set_ease(Tween.EASE_OUT)
 	tween.tween_property(self, "rotation", snap_rot, 0.16)
+	if present_to_camera:
+		tween.tween_callback(Callable(self, "_compute_present_rotation").bind(normal))
+		tween.tween_property(self, "rotation", _present_rot, present_duration)
 	tween.tween_callback(Callable(self, "_emit_roll").bind(value))
+
+
+func _compute_present_rotation(normal: Vector3) -> void:
+	var cam := get_viewport().get_camera_3d()
+	if cam == null:
+		_present_rot = rotation
+		return
+
+	# Rotate so the rolled face (normal) points towards the camera.
+	var desired_dir: Vector3 = (cam.global_position - global_position).normalized()
+	var current_face_dir: Vector3 = global_transform.basis * normal
+	var q := _rotation_from_to(current_face_dir, desired_dir)
+	var current_q := global_transform.basis.get_rotation_quaternion()
+	var target_q := q * current_q
+	_present_rot = target_q.get_euler()
 
 
 func _build_mesh() -> void:
