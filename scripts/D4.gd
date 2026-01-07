@@ -52,9 +52,21 @@ func _finish_roll() -> void:
 		wrapf(rotation.y, -PI, PI),
 		wrapf(rotation.z, -PI, PI)
 	)
-	is_rolling = false
-	var value := _get_top_value()
-	rolled.emit(value)
+	# D4 best-practice: read the value from the FACE ON THE TABLE (bottom face),
+	# because a tetrahedron doesn't "land flat with a face on top" like a cube.
+	var pick := _get_bottom_pick()
+	var value: int = pick["value"]
+	var normal: Vector3 = pick["normal"]
+
+	# Snap so the chosen face becomes the bottom (stable resting pose).
+	var q := _rotation_from_to(normal, Vector3.DOWN)
+	var snap_rot := q.get_euler()
+
+	var tween := create_tween()
+	tween.set_trans(Tween.TRANS_QUART)
+	tween.set_ease(Tween.EASE_OUT)
+	tween.tween_property(self, "rotation", snap_rot, 0.16)
+	tween.tween_callback(Callable(self, "_emit_roll").bind(value))
 
 
 func _build_mesh() -> void:
@@ -153,19 +165,45 @@ func _build_numbers() -> void:
 		label.modulate = Color(0.1, 0.1, 0.1, 1.0)
 		label.outline_modulate = Color(1, 1, 1, 1)
 		label.outline_size = 10
+		label.billboard = BaseMaterial3D.BILLBOARD_DISABLED
 		label.position = Vector3(0, 0, -0.02) # slightly outward along local -Z
 		face_node.add_child(label)
 
-func _get_top_value() -> int:
+func _get_bottom_pick() -> Dictionary:
 	var best_value := 1
-	var best_dot := -INF
+	var best_dot := INF
+	var best_normal := Vector3.DOWN
 	for f in _face_normals:
 		var normal: Vector3 = f["normal"]
 		var value: int = f["value"]
-		# normals are in Body-local; convert to global using the body's global basis.
-		var global_normal := body.global_transform.basis * normal
-		var d := global_normal.dot(Vector3.UP)
-		if d > best_dot:
+		# normals are in local space of this Node3D (Body has no extra rotation).
+		var global_normal := global_transform.basis * normal
+		var d := global_normal.dot(Vector3.UP) # lower means more DOWN
+		if d < best_dot:
 			best_dot = d
 			best_value = value
-	return best_value
+			best_normal = normal
+	return {"value": best_value, "normal": best_normal}
+
+
+func _rotation_from_to(from_dir: Vector3, to_dir: Vector3) -> Quaternion:
+	var f: Vector3 = from_dir.normalized()
+	var t: Vector3 = to_dir.normalized()
+	var dot: float = clampf(f.dot(t), -1.0, 1.0)
+
+	if dot > 0.9999:
+		return Quaternion()
+	if dot < -0.9999:
+		var axis: Vector3 = f.cross(Vector3.RIGHT)
+		if axis.length() < 0.001:
+			axis = f.cross(Vector3.FORWARD)
+		return Quaternion(axis.normalized(), PI)
+
+	var axis: Vector3 = f.cross(t)
+	var angle: float = acos(dot)
+	return Quaternion(axis.normalized(), angle)
+
+
+func _emit_roll(value: int) -> void:
+	is_rolling = false
+	rolled.emit(value)
