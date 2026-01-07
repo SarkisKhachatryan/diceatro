@@ -3,17 +3,19 @@ extends Node3D
 signal rolled(value: int)
 
 @export var roll_duration := 0.9
-@export var present_to_camera := true
-@export var present_duration := 0.18
+@export var lift_height := 0.35
+@export var settle_duration := 0.18
 @export var min_spins := 2
 @export var max_spins := 4
 
 var is_rolling := false
 var _rng := RandomNumberGenerator.new()
 var _face_normals: Array = []
-var _present_rot: Vector3 = Vector3.ZERO
+var _target_value: int = 1
+var _rest_pos: Vector3 = Vector3.ZERO
 
 @onready var body: MeshInstance3D = $Body
+@onready var _labels_root: Node3D = body.get_node_or_null("Labels") as Node3D
 
 
 func _ready() -> void:
@@ -21,11 +23,14 @@ func _ready() -> void:
 	_build_mesh()
 	_build_numbers()
 	rotation = Vector3.ZERO
+	_rest_pos = position
 
 
 func roll() -> void:
 	if is_rolling:
 		return
+
+	_target_value = _rng.randi_range(1, 4)
 
 	var spins := Vector3(
 		_rng.randi_range(min_spins, max_spins),
@@ -41,9 +46,13 @@ func roll() -> void:
 	is_rolling = true
 
 	var tween := create_tween()
+	tween.set_parallel(true)
 	tween.set_trans(Tween.TRANS_CUBIC)
 	tween.set_ease(Tween.EASE_OUT)
+	# Lift while spinning so it never intersects the floor.
+	tween.tween_property(self, "position", _rest_pos + Vector3(0, lift_height, 0), 0.18)
 	tween.tween_property(self, "rotation", rotation + spins + wobble, roll_duration)
+	tween.set_parallel(false)
 	tween.tween_property(self, "scale", Vector3(1.07, 0.93, 1.07), 0.10).set_ease(Tween.EASE_IN)
 	tween.tween_property(self, "scale", Vector3.ONE, 0.12).set_ease(Tween.EASE_OUT)
 	tween.tween_callback(Callable(self, "_finish_roll"))
@@ -55,39 +64,27 @@ func _finish_roll() -> void:
 		wrapf(rotation.y, -PI, PI),
 		wrapf(rotation.z, -PI, PI)
 	)
-	# D4 best-practice: read the value from the FACE ON THE TABLE (bottom face),
-	# because a tetrahedron doesn't "land flat with a face on top" like a cube.
-	var pick := _get_bottom_pick()
-	var value: int = pick["value"]
-	var normal: Vector3 = pick["normal"]
+	var cam := get_viewport().get_camera_3d()
+	var desired_dir: Vector3 = Vector3.FORWARD
+	if cam != null:
+		desired_dir = (cam.global_position - global_position).normalized()
 
-	# Snap so the chosen face becomes the bottom (stable resting pose).
-	var q := _rotation_from_to(normal, Vector3.DOWN)
-	var snap_rot := q.get_euler()
+	# Rotate so the chosen face points toward the camera (always readable).
+	var face := _get_face_for_value(_target_value)
+	var face_normal: Vector3 = face["normal"]
+	var face_up: Vector3 = face["up"]
+	var target_basis := _compute_target_basis(desired_dir, face_normal, face_up)
+	var snap_rot := target_basis.get_euler()
+
+	# Adjust vertical position so the tetrahedron never clips the floor after snapping.
+	var safe_pos := _compute_safe_position(target_basis)
 
 	var tween := create_tween()
 	tween.set_trans(Tween.TRANS_QUART)
 	tween.set_ease(Tween.EASE_OUT)
-	tween.tween_property(self, "rotation", snap_rot, 0.16)
-	if present_to_camera:
-		tween.tween_callback(Callable(self, "_compute_present_rotation").bind(normal))
-		tween.tween_property(self, "rotation", _present_rot, present_duration)
-	tween.tween_callback(Callable(self, "_emit_roll").bind(value))
-
-
-func _compute_present_rotation(normal: Vector3) -> void:
-	var cam := get_viewport().get_camera_3d()
-	if cam == null:
-		_present_rot = rotation
-		return
-
-	# Rotate so the rolled face (normal) points towards the camera.
-	var desired_dir: Vector3 = (cam.global_position - global_position).normalized()
-	var current_face_dir: Vector3 = global_transform.basis * normal
-	var q := _rotation_from_to(current_face_dir, desired_dir)
-	var current_q := global_transform.basis.get_rotation_quaternion()
-	var target_q := q * current_q
-	_present_rot = target_q.get_euler()
+	tween.tween_property(self, "rotation", snap_rot, settle_duration)
+	tween.tween_property(self, "position", safe_pos, settle_duration)
+	tween.tween_callback(Callable(self, "_emit_roll").bind(_target_value))
 
 
 func _build_mesh() -> void:
@@ -168,16 +165,18 @@ func _build_numbers() -> void:
 		var face_node := Node3D.new()
 		face_node.name = "Face_%d" % value
 
-		var z_axis := -normal
-		var x_axis := Vector3.UP.cross(z_axis)
-		if x_axis.length() < 0.001:
-			x_axis = Vector3.RIGHT.cross(z_axis)
-		x_axis = x_axis.normalized()
-		var y_axis := z_axis.cross(x_axis).normalized()
-
-		face_node.basis = Basis(x_axis, y_axis, z_axis)
-		face_node.position = center + normal * 0.12
+		# Push the text further out to avoid any clipping with the face.
+		face_node.position = center + normal * 0.20
 		labels_root.add_child(face_node)
+
+		# Robust orientation: use look_at so we never end up with mirrored/left-handed transforms.
+		var world_basis := body.global_transform.basis.orthonormalized()
+		var world_normal: Vector3 = (world_basis * normal).normalized()
+		var world_up := Vector3.UP - world_normal * Vector3.UP.dot(world_normal)
+		if world_up.length() < 0.001:
+			world_up = Vector3.RIGHT - world_normal * Vector3.RIGHT.dot(world_normal)
+		world_up = world_up.normalized()
+		face_node.look_at(face_node.global_position + world_normal, world_up)
 
 		var label := Label3D.new()
 		label.text = str(value)
@@ -187,24 +186,89 @@ func _build_numbers() -> void:
 		label.outline_modulate = Color(1, 1, 1, 1)
 		label.outline_size = 10
 		label.billboard = BaseMaterial3D.BILLBOARD_DISABLED
-		label.position = Vector3(0, 0, -0.02) # slightly outward along local -Z
+		# Mirror the glyphs horizontally (requested for D4 faces).
+		label.scale = Vector3(-1, 1, 1)
+		label.position = Vector3(0, 0, -0.08) # slightly outward along local -Z
 		face_node.add_child(label)
 
-func _get_bottom_pick() -> Dictionary:
-	var best_value := 1
-	var best_dot := INF
-	var best_normal := Vector3.DOWN
+func _get_face_for_value(value: int) -> Dictionary:
+	# Returns local-space face info: outward normal and "up" direction for the label on that face.
+	if body == null:
+		return {"normal": Vector3.UP, "up": Vector3.UP}
+
+	var labels := body.get_node_or_null("Labels") as Node3D
+	if labels == null:
+		return {"normal": _get_normal_for_value_fallback(value), "up": Vector3.UP}
+
+	var face_node := labels.get_node_or_null("Face_%d" % value) as Node3D
+	if face_node == null:
+		return {"normal": _get_normal_for_value_fallback(value), "up": Vector3.UP}
+
+	# face_node local -Z points outward, so outward normal is (-basis.z).
+	var outward: Vector3 = -face_node.basis.z.normalized()
+	var up_dir: Vector3 = face_node.basis.y.normalized()
+	return {"normal": outward, "up": up_dir}
+
+
+func _get_normal_for_value_fallback(value: int) -> Vector3:
 	for f in _face_normals:
-		var normal: Vector3 = f["normal"]
-		var value: int = f["value"]
-		# normals are in local space of this Node3D (Body has no extra rotation).
-		var global_normal := global_transform.basis * normal
-		var d := global_normal.dot(Vector3.UP) # lower means more DOWN
-		if d < best_dot:
-			best_dot = d
-			best_value = value
-			best_normal = normal
-	return {"value": best_value, "normal": best_normal}
+		if int(f["value"]) == value:
+			return f["normal"]
+	return Vector3.UP
+
+
+func _compute_target_basis(desired_dir: Vector3, face_normal: Vector3, face_up: Vector3) -> Basis:
+	# Build a world-space basis where:
+	# - chosen face points to camera (outward normal -> desired_dir)
+	# - chosen face text is upright (face_up -> desired_up in the screen plane)
+	#
+	# Reminder: for Label3D, local -Z is "forward" (text faces -Z). Our face_node is built so -Z is outward.
+	var z_world := -desired_dir.normalized()
+
+	# Use camera-up-ish vector in the plane perpendicular to desired_dir to keep text upright.
+	var desired_up := Vector3.UP - desired_dir * Vector3.UP.dot(desired_dir)
+	if desired_up.length() < 0.001:
+		desired_up = Vector3.RIGHT - desired_dir * Vector3.RIGHT.dot(desired_dir)
+	desired_up = desired_up.normalized()
+
+	var x_world := desired_up.cross(z_world).normalized()
+	var y_world := z_world.cross(x_world).normalized()
+	var world_basis := Basis(x_world, y_world, z_world)
+
+	# Local basis for the face: x/y are in-plane, z points inward (because outward is -z).
+	var z_local := -face_normal.normalized()
+	var y_local := face_up - z_local * face_up.dot(z_local)
+	if y_local.length() < 0.001:
+		y_local = Vector3.UP - z_local * Vector3.UP.dot(z_local)
+	y_local = y_local.normalized()
+	var x_local := y_local.cross(z_local).normalized()
+	var local_basis := Basis(x_local, y_local, z_local)
+
+	return world_basis * local_basis.inverse()
+
+
+func _compute_safe_position(target_basis: Basis) -> Vector3:
+	# Ensure the tetrahedron is always above the floor (y=0) by lifting it so its lowest vertex is >= 0.
+	# This keeps the visual clean even though we're not doing physics.
+	var v0: Vector3 = Vector3(1, 1, 1)
+	var v1: Vector3 = Vector3(-1, -1, 1)
+	var v2: Vector3 = Vector3(-1, 1, -1)
+	var v3: Vector3 = Vector3(1, -1, -1)
+
+	var s: float = body.scale.x
+	var verts: Array[Vector3] = [v0 * s, v1 * s, v2 * s, v3 * s]
+
+	var min_y: float = INF
+	for v: Vector3 in verts:
+		var y: float = (target_basis * v).y
+		min_y = min(min_y, y)
+
+	var clearance: float = 0.02
+	var pos: Vector3 = _rest_pos
+	var needed: float = -min_y + clearance
+	if needed > 0.0:
+		pos.y += needed
+	return pos
 
 
 func _rotation_from_to(from_dir: Vector3, to_dir: Vector3) -> Quaternion:
