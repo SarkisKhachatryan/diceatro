@@ -11,6 +11,9 @@ signal rolled(value: int)
 @export var body_scale := 0.90
 @export var label_font_size := 96
 @export var label_pixel_size := 0.0085
+@export var face_label_outset := 0.03 # tiny offset above the face plane (printed look)
+@export var label_local_outset := 0.012 # small extra offset to avoid z-fighting (printed look)
+@export var outline_enabled := false
 
 var is_rolling := false
 var _rng := RandomNumberGenerator.new()
@@ -19,11 +22,15 @@ var _target_value: int = 1
 var _rest_pos: Vector3 = Vector3.ZERO
 
 @onready var body: MeshInstance3D = $Body
+@onready var outline: MeshInstance3D = $Body/Outline
+@onready var edges: MeshInstance3D = $Body/Edges
 
 
 func _ready() -> void:
 	_rng.randomize()
 	_build_mesh()
+	_configure_outline()
+	_configure_edges()
 	_build_numbers()
 	rotation = Vector3.ZERO
 	_rest_pos = position
@@ -126,11 +133,88 @@ func _build_mesh() -> void:
 	body.mesh = mesh
 	body.scale = Vector3.ONE * body_scale
 
+	if outline != null:
+		outline.mesh = mesh
+	if edges != null:
+		edges.mesh = null
+
 
 func _add_tri(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3) -> void:
-	st.add_vertex(a)
-	st.add_vertex(b)
-	st.add_vertex(c)
+	# Ensure outward winding (important for correct culling/outline).
+	var center: Vector3 = (a + b + c) / 3.0
+	var n: Vector3 = (b - a).cross(c - a)
+	if n.dot(center) < 0.0:
+		# Flip winding.
+		st.add_vertex(a)
+		st.add_vertex(c)
+		st.add_vertex(b)
+	else:
+		st.add_vertex(a)
+		st.add_vertex(b)
+		st.add_vertex(c)
+
+
+func _configure_outline() -> void:
+	if outline == null:
+		return
+	outline.visible = outline_enabled
+	if not outline_enabled:
+		return
+	outline.scale = Vector3.ONE * 1.05
+	outline.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.03, 0.03, 0.04, 1.0)
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.cull_mode = BaseMaterial3D.CULL_FRONT
+	outline.material_override = mat
+
+
+func _configure_edges() -> void:
+	if body == null or edges == null:
+		return
+	if body.mesh == null:
+		return
+
+	var mdt := MeshDataTool.new()
+	var mesh := body.mesh as Mesh
+	var err := mdt.create_from_surface(mesh, 0)
+	if err != OK:
+		return
+
+	var edge_set := {}
+	for f_i in range(mdt.get_face_count()):
+		var a := mdt.get_face_vertex(f_i, 0)
+		var b := mdt.get_face_vertex(f_i, 1)
+		var c := mdt.get_face_vertex(f_i, 2)
+		_edge_add(edge_set, a, b)
+		_edge_add(edge_set, b, c)
+		_edge_add(edge_set, c, a)
+
+	var im := ImmediateMesh.new()
+	im.surface_begin(Mesh.PRIMITIVE_LINES)
+	for k in edge_set.keys():
+		var pair: Array = k.split(":")
+		var i0 := int(pair[0])
+		var i1 := int(pair[1])
+		im.surface_add_vertex(mdt.get_vertex(i0))
+		im.surface_add_vertex(mdt.get_vertex(i1))
+	im.surface_end()
+
+	edges.mesh = im
+	edges.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.03, 0.03, 0.04, 1.0)
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.no_depth_test = false
+	edges.material_override = mat
+
+
+func _edge_add(edge_set: Dictionary, i0: int, i1: int) -> void:
+	var a := mini(i0, i1)
+	var b := maxi(i0, i1)
+	var key := "%d:%d" % [a, b]
+	edge_set[key] = true
 
 
 func _build_numbers() -> void:
@@ -179,7 +263,8 @@ func _build_numbers() -> void:
 
 		var face_node := Node3D.new()
 		face_node.name = "Face_%d" % value
-		face_node.position = center + normal * 0.30
+		# Keep the label close to the face so it feels "printed" on the die.
+		face_node.position = center + normal * face_label_outset
 		labels_root.add_child(face_node)
 
 		# Robust orientation (same approach as D4): face the node outward.
@@ -202,7 +287,8 @@ func _build_numbers() -> void:
 		label.shaded = false
 		if mirror_numbers:
 			label.scale = Vector3(-1, 1, 1)
-		label.position = Vector3(0, 0, -0.10)
+		# Label3D faces local -Z; nudge slightly outward along -Z so it doesn't z-fight.
+		label.position = Vector3(0, 0, -label_local_outset)
 		face_node.add_child(label)
 
 		# Store face metadata for presentation math (local space).

@@ -25,15 +25,22 @@ const FACE_DEFS := [
 @export var min_spins := 2
 @export var max_spins := 4
 @export var count_face_user_sees := true
+@export var outline_enabled := false
 
 var is_rolling := false
 var _rng := RandomNumberGenerator.new()
+
+@onready var body: MeshInstance3D = $Body
+@onready var outline: MeshInstance3D = $Body/Outline
+@onready var edges: MeshInstance3D = $Body/Edges
 
 
 func _ready() -> void:
 	_rng.randomize()
 	rotation = FACE_ROTATIONS[1]
 	_configure_face_labels()
+	_configure_outline()
+	_configure_edges()
 
 
 func roll() -> void:
@@ -42,6 +49,8 @@ func roll() -> void:
 
 	# Keep labels configured (in case scene is reloaded/hot-changed).
 	_configure_face_labels()
+	_configure_outline()
+	_configure_edges()
 
 	var value: int = _rng.randi_range(1, 6)
 
@@ -125,6 +134,82 @@ func _configure_face_labels() -> void:
 		label.no_depth_test = false
 		label.double_sided = false
 		label.shaded = false
+
+
+func _configure_outline() -> void:
+	if body == null or outline == null:
+		return
+	if body.mesh == null:
+		return
+
+	outline.visible = outline_enabled
+	if not outline_enabled:
+		return
+
+	outline.mesh = body.mesh
+	outline.scale = Vector3.ONE * 1.05
+	outline.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.03, 0.03, 0.04, 1.0)
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.cull_mode = BaseMaterial3D.CULL_FRONT
+	outline.material_override = mat
+
+
+func _configure_edges() -> void:
+	if body == null or edges == null:
+		return
+	if body.mesh == null:
+		return
+
+	var mdt := MeshDataTool.new()
+	# Convert primitive meshes to an ArrayMesh if needed.
+	var mesh: Mesh = body.mesh
+	var arr_mesh: ArrayMesh
+	if mesh is ArrayMesh:
+		arr_mesh = mesh as ArrayMesh
+	else:
+		arr_mesh = ArrayMesh.new()
+		arr_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, mesh.surface_get_arrays(0))
+
+	var err := mdt.create_from_surface(arr_mesh, 0)
+	if err != OK:
+		return
+
+	var edge_set := {}
+	for f_i in range(mdt.get_face_count()):
+		var a := mdt.get_face_vertex(f_i, 0)
+		var b := mdt.get_face_vertex(f_i, 1)
+		var c := mdt.get_face_vertex(f_i, 2)
+		_edge_add(edge_set, a, b)
+		_edge_add(edge_set, b, c)
+		_edge_add(edge_set, c, a)
+
+	var im := ImmediateMesh.new()
+	im.surface_begin(Mesh.PRIMITIVE_LINES)
+	for k in edge_set.keys():
+		var pair: Array = k.split(":")
+		var i0 := int(pair[0])
+		var i1 := int(pair[1])
+		im.surface_add_vertex(mdt.get_vertex(i0))
+		im.surface_add_vertex(mdt.get_vertex(i1))
+	im.surface_end()
+
+	edges.mesh = im
+	edges.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.03, 0.03, 0.04, 1.0)
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.no_depth_test = false
+	edges.material_override = mat
+
+
+func _edge_add(edge_set: Dictionary, i0: int, i1: int) -> void:
+	var a := mini(i0, i1)
+	var b := maxi(i0, i1)
+	var key := "%d:%d" % [a, b]
+	edge_set[key] = true
 
 
 func _get_rotation_presenting_value_to_camera(value: int) -> Vector3:

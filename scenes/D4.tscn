@@ -7,4 +7,8 @@ script = ExtResource("1_1")
 
 [node name="Body" type="MeshInstance3D" parent="."]
 
+[node name="Outline" type="MeshInstance3D" parent="Body"]
+
+[node name="Edges" type="MeshInstance3D" parent="Body"]
+
 

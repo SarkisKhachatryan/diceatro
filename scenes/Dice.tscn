@@ -17,11 +17,15 @@ script = ExtResource("1_1")
 mesh = SubResource("BoxMesh_1")
 surface_material_override/0 = SubResource("StandardMaterial3D_1")
 
+[node name="Outline" type="MeshInstance3D" parent="Body"]
+
+[node name="Edges" type="MeshInstance3D" parent="Body"]
+
 [node name="FaceUp_1" type="Label3D" parent="."]
 text = "1"
 font_size = 96
 pixel_size = 0.01
-position = Vector3(0, 0.53, 0)
+position = Vector3(0, 0.501, 0)
 rotation = Vector3(-1.570796, 0, 0)
 modulate = Color(0.1, 0.1, 0.1, 1)
 outline_modulate = Color(1, 1, 1, 1)
@@ -33,7 +37,7 @@ shaded = false
 text = "6"
 font_size = 96
 pixel_size = 0.01
-position = Vector3(0, -0.53, 0)
+position = Vector3(0, -0.501, 0)
 rotation = Vector3(1.570796, 0, 3.141593)
 modulate = Color(0.1, 0.1, 0.1, 1)
 outline_modulate = Color(1, 1, 1, 1)
@@ -45,7 +49,7 @@ shaded = false
 text = "3"
 font_size = 96
 pixel_size = 0.01
-position = Vector3(0.53, 0, 0)
+position = Vector3(0.501, 0, 0)
 rotation = Vector3(0, 1.570796, 0)
 modulate = Color(0.1, 0.1, 0.1, 1)
 outline_modulate = Color(1, 1, 1, 1)
@@ -57,7 +61,7 @@ shaded = false
 text = "4"
 font_size = 96
 pixel_size = 0.01
-position = Vector3(-0.53, 0, 0)
+position = Vector3(-0.501, 0, 0)
 rotation = Vector3(0, -1.570796, 0)
 modulate = Color(0.1, 0.1, 0.1, 1)
 outline_modulate = Color(1, 1, 1, 1)
@@ -69,7 +73,7 @@ shaded = false
 text = "2"
 font_size = 96
 pixel_size = 0.01
-position = Vector3(0, 0, -0.53)
+position = Vector3(0, 0, -0.501)
 rotation = Vector3(0, 3.141593, 0)
 modulate = Color(0.1, 0.1, 0.1, 1)
 outline_modulate = Color(1, 1, 1, 1)
@@ -81,7 +85,7 @@ shaded = false
 text = "5"
 font_size = 96
 pixel_size = 0.01
-position = Vector3(0, 0, 0.53)
+position = Vector3(0, 0, 0.501)
 rotation = Vector3(0, 0, 0)
 modulate = Color(0.1, 0.1, 0.1, 1)
 outline_modulate = Color(1, 1, 1, 1)

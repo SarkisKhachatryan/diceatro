@@ -35,6 +35,11 @@ func _assert_gt(a: float, b: float, msg: String) -> void:
 	if not (a > b):
 		_fail("%s (expected > %f, got %f)" % [msg, b, a])
 
+func _assert_near(a: float, b: float, eps: float, msg: String) -> void:
+	_assertions += 1
+	if abs(a - b) > eps:
+		_fail("%s (expected %f±%f, got %f)" % [msg, b, eps, a])
+
 
 func _run_all() -> void:
 	# Ensure a viewport exists.
@@ -45,6 +50,7 @@ func _run_all() -> void:
 	await _test_d4_safe_position_above_floor()
 	await _test_d8_target_basis_points_face_to_camera()
 	await _test_d8_safe_position_above_floor()
+	await _test_surface_label_offsets()
 
 	var summary := "Tests: %d assertions, %d failures" % [_assertions, _failures]
 	if _failures == 0:
@@ -209,6 +215,60 @@ func _test_d8_safe_position_above_floor() -> void:
 	cam.queue_free()
 	d8 = null
 	cam = null
+	d8_scene = null
+	await process_frame
+	await process_frame
+
+
+func _test_surface_label_offsets() -> void:
+	# D6 labels are authored in the scene. Ensure they're close to the cube surface.
+	var dice_scene: PackedScene = load("res://scenes/Dice.tscn")
+	var dice := dice_scene.instantiate()
+	root.add_child(dice)
+	await process_frame
+
+	var nodes := [
+		dice.get_node("FaceUp_1"),
+		dice.get_node("FaceDown_6"),
+		dice.get_node("FaceFront_2"),
+		dice.get_node("FaceBack_5"),
+		dice.get_node("FaceRight_3"),
+		dice.get_node("FaceLeft_4"),
+	]
+
+	for n in nodes:
+		var l := n as Label3D
+		_assert_true(l != null, "D6 label node should exist")
+		var dist := l.position.length()
+		_assert_near(dist, 0.501, 0.01, "D6 label should be very close to surface")
+
+	dice.queue_free()
+	dice = null
+	dice_scene = null
+	await process_frame
+	await process_frame
+
+	# D4/D8 use exported offsets. Verify defaults are the "printed" ones.
+	var d4_scene: PackedScene = load("res://scenes/D4.tscn")
+	var d4 := d4_scene.instantiate()
+	root.add_child(d4)
+	await process_frame
+	_assert_near(float(d4.face_label_outset), 0.03, 0.0001, "D4 face_label_outset default")
+	_assert_near(float(d4.label_local_outset), 0.012, 0.0001, "D4 label_local_outset default")
+	d4.queue_free()
+	d4 = null
+	d4_scene = null
+	await process_frame
+	await process_frame
+
+	var d8_scene: PackedScene = load("res://scenes/D8.tscn")
+	var d8 := d8_scene.instantiate()
+	root.add_child(d8)
+	await process_frame
+	_assert_near(float(d8.face_label_outset), 0.03, 0.0001, "D8 face_label_outset default")
+	_assert_near(float(d8.label_local_outset), 0.012, 0.0001, "D8 label_local_outset default")
+	d8.queue_free()
+	d8 = null
 	d8_scene = null
 	await process_frame
 	await process_frame
