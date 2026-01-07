@@ -22,20 +22,24 @@ text = "1"
 font_size = 96
 pixel_size = 0.01
 position = Vector3(0, 0.53, 0)
-rotation = Vector3(1.570796, 0, 0)
+rotation = Vector3(-1.570796, 0, 0)
 modulate = Color(0.1, 0.1, 0.1, 1)
 outline_modulate = Color(1, 1, 1, 1)
 outline_size = 10
+billboard = 0
+shaded = false
 
 [node name="FaceDown_6" type="Label3D" parent="."]
 text = "6"
 font_size = 96
 pixel_size = 0.01
 position = Vector3(0, -0.53, 0)
-rotation = Vector3(-1.570796, 0, 3.141593)
+rotation = Vector3(1.570796, 0, 3.141593)
 modulate = Color(0.1, 0.1, 0.1, 1)
 outline_modulate = Color(1, 1, 1, 1)
 outline_size = 10
+billboard = 0
+shaded = false
 
 [node name="FaceRight_3" type="Label3D" parent="."]
 text = "3"
@@ -46,6 +50,8 @@ rotation = Vector3(0, 1.570796, 0)
 modulate = Color(0.1, 0.1, 0.1, 1)
 outline_modulate = Color(1, 1, 1, 1)
 outline_size = 10
+billboard = 0
+shaded = false
 
 [node name="FaceLeft_4" type="Label3D" parent="."]
 text = "4"
@@ -56,25 +62,31 @@ rotation = Vector3(0, -1.570796, 0)
 modulate = Color(0.1, 0.1, 0.1, 1)
 outline_modulate = Color(1, 1, 1, 1)
 outline_size = 10
+billboard = 0
+shaded = false
 
 [node name="FaceFront_2" type="Label3D" parent="."]
 text = "2"
 font_size = 96
 pixel_size = 0.01
 position = Vector3(0, 0, -0.53)
-rotation = Vector3(0, 0, 0)
+rotation = Vector3(0, 3.141593, 0)
 modulate = Color(0.1, 0.1, 0.1, 1)
 outline_modulate = Color(1, 1, 1, 1)
 outline_size = 10
+billboard = 0
+shaded = false
 
 [node name="FaceBack_5" type="Label3D" parent="."]
 text = "5"
 font_size = 96
 pixel_size = 0.01
 position = Vector3(0, 0, 0.53)
-rotation = Vector3(0, 3.141593, 0)
+rotation = Vector3(0, 0, 0)
 modulate = Color(0.1, 0.1, 0.1, 1)
 outline_modulate = Color(1, 1, 1, 1)
 outline_size = 10
+billboard = 0
+shaded = false
 
 

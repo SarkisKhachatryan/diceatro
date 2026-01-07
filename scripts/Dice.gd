@@ -24,6 +24,7 @@ const FACE_DEFS := [
 @export var snap_duration := 0.14
 @export var min_spins := 2
 @export var max_spins := 4
+@export var count_face_user_sees := true
 
 var is_rolling := false
 var _rng := RandomNumberGenerator.new()
@@ -31,15 +32,18 @@ var _rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
 	_rng.randomize()
-	_disable_label_billboarding()
 	rotation = FACE_ROTATIONS[1]
+	_configure_face_labels()
 
 
 func roll() -> void:
 	if is_rolling:
 		return
 
-	_disable_label_billboarding()
+	# Keep labels configured (in case scene is reloaded/hot-changed).
+	_configure_face_labels()
+
+	var value: int = _rng.randi_range(1, 6)
 
 	var spins := Vector3(
 		_rng.randi_range(min_spins, max_spins),
@@ -67,20 +71,24 @@ func roll() -> void:
 	tween.tween_property(self, "scale", Vector3(1.08, 0.92, 1.08), 0.10).set_ease(Tween.EASE_IN)
 	tween.tween_property(self, "scale", Vector3.ONE, 0.12).set_ease(Tween.EASE_OUT)
 
-	tween.tween_callback(Callable(self, "_finish_roll"))
+	tween.tween_callback(Callable(self, "_finish_roll").bind(value))
 
 
-func _finish_roll() -> void:
+func _finish_roll(value: int) -> void:
 	# Normalize rotation to avoid it growing without bound after many rolls.
 	rotation = Vector3(
 		wrapf(rotation.x, -PI, PI),
 		wrapf(rotation.y, -PI, PI),
 		wrapf(rotation.z, -PI, PI)
 	)
-	var value := _get_top_value()
 
-	# Snap to a stable "face-flat" orientation so it's never left balancing on an edge.
-	var snap_rot: Vector3 = FACE_ROTATIONS[value]
+	# Snap to a stable orientation. If requested, orient the rolled face toward the camera
+	# (so score matches the face the user sees).
+	var snap_rot: Vector3
+	if count_face_user_sees:
+		snap_rot = _get_rotation_presenting_value_to_camera(value)
+	else:
+		snap_rot = FACE_ROTATIONS[value]
 	var tween := create_tween()
 	tween.set_trans(Tween.TRANS_QUART)
 	tween.set_ease(Tween.EASE_OUT)
@@ -103,15 +111,68 @@ func _get_top_value() -> int:
 
 
 func _disable_label_billboarding() -> void:
-	# Ensure numbers are "printed" on the faces (not always facing the camera).
+	pass
+
+
+func _configure_face_labels() -> void:
+	# D6 labels are authored in `scenes/Dice.tscn` with correct position/rotation.
+	# We only enforce render settings here (no transform changes).
 	for f in FACE_DEFS:
 		var label := get_node_or_null(f["path"]) as Label3D
 		if label == null:
 			continue
-		# Label3D uses the same billboard modes as BaseMaterial3D.
 		label.billboard = BaseMaterial3D.BILLBOARD_DISABLED
 		label.no_depth_test = false
 		label.double_sided = false
+		label.shaded = false
+
+
+func _get_rotation_presenting_value_to_camera(value: int) -> Vector3:
+	var cam := get_viewport().get_camera_3d()
+	if cam == null:
+		return FACE_ROTATIONS[value]
+
+	var desired_dir: Vector3 = (cam.global_position - global_position).normalized()
+
+	# Find face definition for the given value.
+	var face_normal := Vector3.UP
+	var face_up := Vector3.UP
+	for f in FACE_DEFS:
+		var v: int = f["value"]
+		if v == value:
+			face_normal = f["normal"]
+			face_up = f["up"]
+			break
+
+	var target_basis := _compute_target_basis(desired_dir, face_normal, face_up)
+	return target_basis.get_euler()
+
+
+func _compute_target_basis(desired_dir: Vector3, face_normal: Vector3, face_up: Vector3) -> Basis:
+	# Build a basis where the chosen face's outward normal points toward desired_dir,
+	# while keeping the digit upright using a projected-up vector.
+	var dir := desired_dir.normalized()
+	var z_world := -dir
+
+	var desired_up := Vector3.UP - dir * Vector3.UP.dot(dir)
+	if desired_up.length() < 0.001:
+		desired_up = Vector3.FORWARD - dir * Vector3.FORWARD.dot(dir)
+	desired_up = desired_up.normalized()
+
+	var x_world := desired_up.cross(z_world).normalized()
+	var y_world := z_world.cross(x_world).normalized()
+	var world_basis := Basis(x_world, y_world, z_world)
+
+	# Local face basis: we want local -Z to be outward.
+	var z_local := -face_normal.normalized()
+	var y_local := face_up - z_local * face_up.dot(z_local)
+	if y_local.length() < 0.001:
+		y_local = Vector3.UP - z_local * Vector3.UP.dot(z_local)
+	y_local = y_local.normalized()
+	var x_local := y_local.cross(z_local).normalized()
+	var local_basis := Basis(x_local, y_local, z_local)
+
+	return world_basis * local_basis.inverse()
 
 
 func _emit_roll(value: int) -> void:

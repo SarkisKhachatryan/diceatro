@@ -11,6 +11,10 @@ config_version=5
 [application]
 
 config/name="Diceatro"
+run/main_scene="res://scenes/Main.tscn"
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
-run/main_scene="res://scenes/Main.tscn"
+
+[debug]
+
+file_logging/enable_file_logging=true

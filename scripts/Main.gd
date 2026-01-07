@@ -53,6 +53,9 @@ func _spawn_dice(sides: int) -> void:
 	for child in dice_holder.get_children():
 		child.queue_free()
 
+	# D4 is taller (tetrahedron), so lift it a bit to avoid clipping into the floor.
+	dice_holder.position = Vector3(0, 0.5 if sides == 6 else 0.9, 0)
+
 	var scene := D6_SCENE if sides == 6 else D4_SCENE
 	dice = scene.instantiate()
 	dice_holder.add_child(dice)
