@@ -178,5 +178,3 @@ func _compute_target_basis(desired_dir: Vector3, face_normal: Vector3, face_up: 
 func _emit_roll(value: int) -> void:
 	is_rolling = false
 	rolled.emit(value)
-
-

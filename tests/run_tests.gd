@@ -43,6 +43,8 @@ func _run_all() -> void:
 	await _test_d6_camera_facing_value()
 	await _test_d4_target_basis_points_face_to_camera()
 	await _test_d4_safe_position_above_floor()
+	await _test_d8_target_basis_points_face_to_camera()
+	await _test_d8_safe_position_above_floor()
 
 	var summary := "Tests: %d assertions, %d failures" % [_assertions, _failures]
 	if _failures == 0:
@@ -161,3 +163,52 @@ func _test_d4_safe_position_above_floor() -> void:
 	await process_frame
 
 
+func _test_d8_target_basis_points_face_to_camera() -> void:
+	var cam := _setup_camera()
+	var d8_scene: PackedScene = load("res://scenes/D8.tscn")
+	var d8 := d8_scene.instantiate()
+	root.add_child(d8)
+	await process_frame
+
+	d8.global_position = Vector3.ZERO
+	var desired_dir: Vector3 = (cam.global_position - d8.global_position).normalized()
+
+	for value in range(1, 9):
+		var face: Dictionary = d8._get_face_for_value(value)
+		var face_normal: Vector3 = face["normal"]
+		var face_up: Vector3 = face["up"]
+		var basis: Basis = d8._compute_target_basis(desired_dir, face_normal, face_up)
+		var world_n: Vector3 = (basis * face_normal).normalized()
+		var dot: float = world_n.dot(desired_dir)
+		_assert_gt(dot, 0.92, "D8 face %d should point toward camera" % value)
+
+	d8.queue_free()
+	cam.queue_free()
+	d8 = null
+	cam = null
+	d8_scene = null
+	await process_frame
+	await process_frame
+
+
+func _test_d8_safe_position_above_floor() -> void:
+	var cam := _setup_camera()
+	var d8_scene: PackedScene = load("res://scenes/D8.tscn")
+	var d8 := d8_scene.instantiate()
+	root.add_child(d8)
+	await process_frame
+
+	d8.global_position = Vector3.ZERO
+	var desired_dir: Vector3 = (cam.global_position - d8.global_position).normalized()
+	var face: Dictionary = d8._get_face_for_value(1)
+	var basis: Basis = d8._compute_target_basis(desired_dir, face["normal"], face["up"])
+	var pos: Vector3 = d8._compute_safe_position(basis)
+	_assert_gt(pos.y, -0.0001, "D8 safe position should not go below floor")
+
+	d8.queue_free()
+	cam.queue_free()
+	d8 = null
+	cam = null
+	d8_scene = null
+	await process_frame
+	await process_frame

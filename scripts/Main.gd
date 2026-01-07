@@ -2,6 +2,7 @@ extends Node3D
 
 const D6_SCENE: PackedScene = preload("res://scenes/Dice.tscn")
 const D4_SCENE: PackedScene = preload("res://scenes/D4.tscn")
+const D8_SCENE: PackedScene = preload("res://scenes/D8.tscn")
 
 @onready var dice_holder: Node3D = $DiceHolder
 @onready var dice_type: OptionButton = $CanvasLayer/UI/HUD/VBox/DiceType
@@ -17,6 +18,7 @@ func _ready() -> void:
 	dice_type.clear()
 	dice_type.add_item("D6", 6)
 	dice_type.add_item("D4", 4)
+	dice_type.add_item("D8", 8)
 	dice_type.selected = 0
 	dice_type.item_selected.connect(_on_dice_type_selected)
 
@@ -53,10 +55,19 @@ func _spawn_dice(sides: int) -> void:
 	for child in dice_holder.get_children():
 		child.queue_free()
 
-	# D4 is taller (tetrahedron), so lift it a bit to avoid clipping into the floor.
-	dice_holder.position = Vector3(0, 0.5 if sides == 6 else 0.9, 0)
+	# D4/D8 are taller, so lift them a bit to avoid clipping into the floor.
+	var y := 0.5
+	if sides == 4:
+		y = 0.9
+	elif sides == 8:
+		y = 1.0
+	dice_holder.position = Vector3(0, y, 0)
 
-	var scene := D6_SCENE if sides == 6 else D4_SCENE
+	var scene: PackedScene = D6_SCENE
+	if sides == 4:
+		scene = D4_SCENE
+	elif sides == 8:
+		scene = D8_SCENE
 	dice = scene.instantiate()
 	dice_holder.add_child(dice)
 	dice.rolled.connect(_on_dice_rolled)
