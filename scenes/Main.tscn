@@ -4,6 +4,8 @@
 [ext_resource type="PackedScene" path="res://scenes/Dice.tscn" id="2_1"]
 [ext_resource type="PackedScene" path="res://scenes/D4.tscn" id="3_1"]
 [ext_resource type="PackedScene" path="res://scenes/D8.tscn" id="4_1"]
+[ext_resource type="PackedScene" path="res://scenes/D10.tscn" id="5_1"]
+[ext_resource type="PackedScene" path="res://scenes/D12.tscn" id="6_1"]
 
 [sub_resource type="Environment" id="Environment_1"]
 background_mode = 1

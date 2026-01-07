@@ -51,6 +51,10 @@ func _run_all() -> void:
 	await _test_d8_target_basis_points_face_to_camera()
 	await _test_d8_safe_position_above_floor()
 	await _test_surface_label_offsets()
+	await _test_d10_target_basis_points_face_to_camera()
+	await _test_d10_safe_position_above_floor()
+	await _test_d12_target_basis_points_face_to_camera()
+	await _test_d12_safe_position_above_floor()
 
 	var summary := "Tests: %d assertions, %d failures" % [_assertions, _failures]
 	if _failures == 0:
@@ -270,5 +274,131 @@ func _test_surface_label_offsets() -> void:
 	d8.queue_free()
 	d8 = null
 	d8_scene = null
+	await process_frame
+	await process_frame
+
+	var d10_scene: PackedScene = load("res://scenes/D10.tscn")
+	var d10 := d10_scene.instantiate()
+	root.add_child(d10)
+	await process_frame
+	_assert_near(float(d10.face_label_outset), 0.03, 0.0001, "D10 face_label_outset default")
+	_assert_near(float(d10.label_local_outset), 0.012, 0.0001, "D10 label_local_outset default")
+	d10.queue_free()
+	d10 = null
+	d10_scene = null
+	await process_frame
+	await process_frame
+
+	var d12_scene: PackedScene = load("res://scenes/D12.tscn")
+	var d12 := d12_scene.instantiate()
+	root.add_child(d12)
+	await process_frame
+	_assert_near(float(d12.face_label_outset), 0.03, 0.0001, "D12 face_label_outset default")
+	_assert_near(float(d12.label_local_outset), 0.012, 0.0001, "D12 label_local_outset default")
+	d12.queue_free()
+	d12 = null
+	d12_scene = null
+	await process_frame
+	await process_frame
+
+
+func _test_d10_target_basis_points_face_to_camera() -> void:
+	var cam := _setup_camera()
+	var d10_scene: PackedScene = load("res://scenes/D10.tscn")
+	var d10 := d10_scene.instantiate()
+	root.add_child(d10)
+	await process_frame
+
+	d10.global_position = Vector3.ZERO
+	var desired_dir: Vector3 = (cam.global_position - d10.global_position).normalized()
+
+	for value in range(1, 11):
+		var face: Dictionary = d10._get_face_for_value(value)
+		var face_normal: Vector3 = face["normal"]
+		var face_up: Vector3 = face["up"]
+		var basis: Basis = d10._compute_target_basis(desired_dir, face_normal, face_up)
+		var world_n: Vector3 = (basis * face_normal).normalized()
+		var dot: float = world_n.dot(desired_dir)
+		_assert_gt(dot, 0.92, "D10 face %d should point toward camera" % value)
+
+	d10.queue_free()
+	cam.queue_free()
+	d10 = null
+	cam = null
+	d10_scene = null
+	await process_frame
+	await process_frame
+
+
+func _test_d10_safe_position_above_floor() -> void:
+	var cam := _setup_camera()
+	var d10_scene: PackedScene = load("res://scenes/D10.tscn")
+	var d10 := d10_scene.instantiate()
+	root.add_child(d10)
+	await process_frame
+
+	d10.global_position = Vector3.ZERO
+	var desired_dir: Vector3 = (cam.global_position - d10.global_position).normalized()
+	var face: Dictionary = d10._get_face_for_value(1)
+	var basis: Basis = d10._compute_target_basis(desired_dir, face["normal"], face["up"])
+	var pos: Vector3 = d10._compute_safe_position(basis)
+	_assert_gt(pos.y, -0.0001, "D10 safe position should not go below floor")
+
+	d10.queue_free()
+	cam.queue_free()
+	d10 = null
+	cam = null
+	d10_scene = null
+	await process_frame
+	await process_frame
+
+
+func _test_d12_target_basis_points_face_to_camera() -> void:
+	var cam := _setup_camera()
+	var d12_scene: PackedScene = load("res://scenes/D12.tscn")
+	var d12 := d12_scene.instantiate()
+	root.add_child(d12)
+	await process_frame
+
+	d12.global_position = Vector3.ZERO
+	var desired_dir: Vector3 = (cam.global_position - d12.global_position).normalized()
+
+	for value in range(1, 13):
+		var face: Dictionary = d12._get_face_for_value(value)
+		var face_normal: Vector3 = face["normal"]
+		var face_up: Vector3 = face["up"]
+		var basis: Basis = d12._compute_target_basis(desired_dir, face_normal, face_up)
+		var world_n: Vector3 = (basis * face_normal).normalized()
+		var dot: float = world_n.dot(desired_dir)
+		_assert_gt(dot, 0.92, "D12 face %d should point toward camera" % value)
+
+	d12.queue_free()
+	cam.queue_free()
+	d12 = null
+	cam = null
+	d12_scene = null
+	await process_frame
+	await process_frame
+
+
+func _test_d12_safe_position_above_floor() -> void:
+	var cam := _setup_camera()
+	var d12_scene: PackedScene = load("res://scenes/D12.tscn")
+	var d12 := d12_scene.instantiate()
+	root.add_child(d12)
+	await process_frame
+
+	d12.global_position = Vector3.ZERO
+	var desired_dir: Vector3 = (cam.global_position - d12.global_position).normalized()
+	var face: Dictionary = d12._get_face_for_value(1)
+	var basis: Basis = d12._compute_target_basis(desired_dir, face["normal"], face["up"])
+	var pos: Vector3 = d12._compute_safe_position(basis)
+	_assert_gt(pos.y, -0.0001, "D12 safe position should not go below floor")
+
+	d12.queue_free()
+	cam.queue_free()
+	d12 = null
+	cam = null
+	d12_scene = null
 	await process_frame
 	await process_frame
