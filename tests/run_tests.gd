@@ -55,6 +55,10 @@ func _run_all() -> void:
 	await _test_d10_safe_position_above_floor()
 	await _test_d12_target_basis_points_face_to_camera()
 	await _test_d12_safe_position_above_floor()
+	await _test_d20_target_basis_points_face_to_camera()
+	await _test_d20_safe_position_above_floor()
+	await _test_main_camera_defaults()
+	await _test_d20_defaults()
 
 	var summary := "Tests: %d assertions, %d failures" % [_assertions, _failures]
 	if _failures == 0:
@@ -301,6 +305,18 @@ func _test_surface_label_offsets() -> void:
 	await process_frame
 	await process_frame
 
+	var d20_scene: PackedScene = load("res://scenes/D20.tscn")
+	var d20 := d20_scene.instantiate()
+	root.add_child(d20)
+	await process_frame
+	_assert_near(float(d20.face_label_outset), 0.03, 0.0001, "D20 face_label_outset default")
+	_assert_near(float(d20.label_local_outset), 0.012, 0.0001, "D20 label_local_outset default")
+	d20.queue_free()
+	d20 = null
+	d20_scene = null
+	await process_frame
+	await process_frame
+
 
 func _test_d10_target_basis_points_face_to_camera() -> void:
 	var cam := _setup_camera()
@@ -400,5 +416,92 @@ func _test_d12_safe_position_above_floor() -> void:
 	d12 = null
 	cam = null
 	d12_scene = null
+	await process_frame
+	await process_frame
+
+
+func _test_d20_target_basis_points_face_to_camera() -> void:
+	var cam := _setup_camera()
+	var d20_scene: PackedScene = load("res://scenes/D20.tscn")
+	var d20 := d20_scene.instantiate()
+	root.add_child(d20)
+	await process_frame
+
+	d20.global_position = Vector3.ZERO
+	var desired_dir: Vector3 = (cam.global_position - d20.global_position).normalized()
+
+	for value in range(1, 21):
+		var face: Dictionary = d20._get_face_for_value(value)
+		var face_normal: Vector3 = face["normal"]
+		var face_up: Vector3 = face["up"]
+		var basis: Basis = d20._compute_target_basis(desired_dir, face_normal, face_up)
+		var world_n: Vector3 = (basis * face_normal).normalized()
+		var dot: float = world_n.dot(desired_dir)
+		_assert_gt(dot, 0.92, "D20 face %d should point toward camera" % value)
+
+	d20.queue_free()
+	cam.queue_free()
+	d20 = null
+	cam = null
+	d20_scene = null
+	await process_frame
+	await process_frame
+
+
+func _test_d20_safe_position_above_floor() -> void:
+	var cam := _setup_camera()
+	var d20_scene: PackedScene = load("res://scenes/D20.tscn")
+	var d20 := d20_scene.instantiate()
+	root.add_child(d20)
+	await process_frame
+
+	d20.global_position = Vector3.ZERO
+	var desired_dir: Vector3 = (cam.global_position - d20.global_position).normalized()
+	var face: Dictionary = d20._get_face_for_value(1)
+	var basis: Basis = d20._compute_target_basis(desired_dir, face["normal"], face["up"])
+	var pos: Vector3 = d20._compute_safe_position(basis)
+	_assert_gt(pos.y, -0.0001, "D20 safe position should not go below floor")
+
+	d20.queue_free()
+	cam.queue_free()
+	d20 = null
+	cam = null
+	d20_scene = null
+	await process_frame
+	await process_frame
+
+
+func _test_main_camera_defaults() -> void:
+	var main_scene: PackedScene = load("res://scenes/Main.tscn")
+	var main := main_scene.instantiate()
+	root.add_child(main)
+	await process_frame
+
+	var cam := main.get_node_or_null("Camera3D") as Camera3D
+	_assert_true(cam != null, "Main.tscn should have Camera3D")
+	if cam != null:
+		_assert_near(cam.position.x, 0.0, 0.0001, "Camera x position")
+		_assert_near(cam.position.y, 3.0, 0.001, "Camera y position")
+		_assert_near(cam.position.z, 6.4, 0.001, "Camera z position")
+		_assert_near(cam.rotation.x, -0.46, 0.01, "Camera tilt")
+
+	main.queue_free()
+	main = null
+	main_scene = null
+	await process_frame
+	await process_frame
+
+
+func _test_d20_defaults() -> void:
+	var d20_scene: PackedScene = load("res://scenes/D20.tscn")
+	var d20 := d20_scene.instantiate()
+	root.add_child(d20)
+	await process_frame
+
+	_assert_near(float(d20.body_scale), 0.68, 0.0001, "D20 body_scale default")
+
+	d20.queue_free()
+	d20 = null
+	d20_scene = null
 	await process_frame
 	await process_frame

@@ -5,6 +5,7 @@ const D4_SCENE: PackedScene = preload("res://scenes/D4.tscn")
 const D8_SCENE: PackedScene = preload("res://scenes/D8.tscn")
 const D10_SCENE: PackedScene = preload("res://scenes/D10.tscn")
 const D12_SCENE: PackedScene = preload("res://scenes/D12.tscn")
+const D20_SCENE: PackedScene = preload("res://scenes/D20.tscn")
 
 @onready var dice_holder: Node3D = $DiceHolder
 @onready var dice_type: OptionButton = $CanvasLayer/UI/HUD/VBox/DiceType
@@ -23,6 +24,7 @@ func _ready() -> void:
 	dice_type.add_item("D8", 8)
 	dice_type.add_item("D10", 10)
 	dice_type.add_item("D12", 12)
+	dice_type.add_item("D20", 20)
 	dice_type.selected = 0
 	dice_type.item_selected.connect(_on_dice_type_selected)
 
@@ -69,6 +71,8 @@ func _spawn_dice(sides: int) -> void:
 		y = 1.0
 	elif sides == 12:
 		y = 1.05
+	elif sides == 20:
+		y = 1.05
 	dice_holder.position = Vector3(0, y, 0)
 
 	var scene: PackedScene = D6_SCENE
@@ -80,6 +84,8 @@ func _spawn_dice(sides: int) -> void:
 		scene = D10_SCENE
 	elif sides == 12:
 		scene = D12_SCENE
+	elif sides == 20:
+		scene = D20_SCENE
 	dice = scene.instantiate()
 	dice_holder.add_child(dice)
 	dice.rolled.connect(_on_dice_rolled)
